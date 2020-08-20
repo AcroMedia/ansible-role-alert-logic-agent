@@ -1,0 +1,466 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Create AlertLogic IDS security infrastructure inside a VPC. The artifacts created are: Route Table using the provided Internet Gateway as default route, Subnet inside the VPC using a user specified CIDR and Availability zone, a Network ACL attached to the Subnet giving it full access for all ingress traffic. Also a Security Group, a Launch Configuration for the security appliances that uses the Security Group and an Autoscaling Group that uses the Launch Configuration and the created Subnet.",
+    "Parameters": {
+        "AccountId": {
+            "Description": "Enter your AlertLogic account ID.",
+            "Type": "String",
+            "AllowedPattern": "^[1-9][0-9]*$",
+            "ConstraintDescription": "must be a valid AlertLogic account ID"
+        },
+        "DeploymentId": {
+            "Description": "Enter your AlertLogic deployment ID.",
+            "Type": "String",
+            "AllowedPattern": "^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$",
+            "ConstraintDescription": "must be a valid UUID"
+        },
+        "VpcId": {
+            "Description": "Select a target VPC to deploy security infrastructure.",
+            "Type": "AWS::EC2::VPC::Id",
+            "ConstraintDescription": "must be a valid VPC ID"
+        },
+        "VpcCidr": {
+            "Description": "Enter CIDR of the selected VPC",
+            "Type": "String",
+            "AllowedPattern": "^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}/[0-9]{1,2}$",
+            "ConstraintDescription": "must be a valid CIDR"
+        },
+        "AvailabilityZoneName": {
+            "Description": "Select a target AZ to deploy IDS security infrastructure.",
+            "Type": "AWS::EC2::AvailabilityZone::Name",
+            "ConstraintDescription": "must be a valid Availability Zone for the provided VPC ID"
+        },
+        "InternetGatewayId": {
+            "Description": "Enter the internet gateway ID attached to the selected VPC.",
+            "Type": "String",
+            "AllowedPattern": "^igw-[a-f0-9]+$",
+            "ConstraintDescription": "must be a valid internet gateway ID"
+        },
+        "SubnetCidr": {
+            "Description": "Enter CIDR to assign to a new security subnet",
+            "Type": "String",
+            "AllowedPattern": "(^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}/[0-9]{1,2}$){0,1}",
+            "ConstraintDescription": "must be a valid CIDR"
+        },
+        "InstanceType": {
+            "Description": "Select the instance type to launch IDS security appliances",
+            "Type": "String",
+            "Default": "c5.large",
+            "AllowedValues": [
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m5.large",
+                "m5.xlarge",
+                "m5.2xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c5.large",
+                "c5.xlarge",
+                "c5.2xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type"
+        },
+        "NumAppliances": {
+            "Description": "Enter a desired number of security appliances",
+            "Type": "Number",
+            "Default": "1",
+            "MaxValue": "10",
+            "ConstraintDescription": "must be an integer between 1 and 10"
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Alert Logic configuration"
+                    },
+                    "Parameters": [
+                        "AccountId",
+                        "DeploymentId",
+                        "DatacenterLocation"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Network Configuration"
+                    },
+                    "Parameters": [
+                        "VpcId",
+                        "VpcCidr",
+                        "AvailabilityZoneName",
+                        "SubnetCidr",
+                        "InternetGatewayId"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "IDS Security Appliances configuration"
+                    },
+                    "Parameters": [
+                        "InstanceType",
+                        "NumAppliances"
+                    ]
+                }
+            ],
+            "ParameterLabels": {
+                "AccountId": {
+                    "default": "Alert Logic Account ID"
+                },
+                "DeploymentId": {
+                    "default": "Alert Logic Deployment ID"
+                },
+                "DatacenterLocation": {
+                    "default": "Alert Logic DC location"
+                },
+                "VpcId": {
+                    "default": "Target VPC"
+                },
+                "SubnetCidr": {
+                    "default": "Target Subnet CIDR"
+                },
+                "InternetGatewayId": {
+                    "default": "Internet gateway ID"
+                },
+                "InstanceType": {
+                    "default": "AWS instance type"
+                },
+                "NumAppliances": {
+                    "default": "Number of instances to deploy"
+                }
+            }
+        }
+    },
+    "Mappings": {
+        "Internal": {
+            "Tags": {
+                "Version": "v1.0.11"
+            }
+        }
+    },
+    "Resources": {
+        "IdsReducedCfnStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "http://route105-manual-mode.repository.s3.amazonaws.com/cf_templates_latest/al_security_ids_reduced.template",
+                "Parameters": {
+                    "AccountId": {
+                        "Ref": "AccountId"
+                    },
+                    "DeploymentId": {
+                        "Ref": "DeploymentId"
+                    },
+                    "VpcId": {
+                        "Ref": "VpcId"
+                    },
+                    "VpcCidr": {
+                        "Ref": "VpcCidr"
+                    },
+                    "SubnetId": {
+                        "Ref": "Subnet"
+                    },
+                    "AvailabilityZoneName": {
+                        "Ref": "AvailabilityZoneName"
+                    },
+                    "AssignPublicIp": "true",
+                    "InstanceType": {
+                        "Ref": "InstanceType"
+                    },
+                    "NumAppliances": {
+                        "Ref": "NumAppliances"
+                    }
+                },
+                "TimeoutInMinutes": "60"
+            }
+        },
+        "NetworkAcl": {
+            "Type": "AWS::EC2::NetworkAcl",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "AlertLogic IDS Security Network ACL ",
+                                    {
+                                        "Ref": "AccountId"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "DeploymentId"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "AvailabilityZoneName"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "VpcId"
+                                    }
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-AccountID",
+                        "Value": {
+                            "Ref": "AccountId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-EnvironmentID",
+                        "Value": {
+                            "Ref": "DeploymentId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Security"
+                    },
+                    {
+                        "Key": "AlertLogic IDS Manual Mode Template Version",
+                        "Value": {
+                            "Fn::FindInMap": [
+                                "Internal",
+                                "Tags",
+                                "Version"
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "NetworkAclEntryIngress": {
+            "Type": "AWS::EC2::NetworkAclEntry",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "RuleNumber": "100",
+                "Protocol": "-1",
+                "RuleAction": "allow",
+                "Egress": "false",
+                "CidrBlock": "0.0.0.0/0"
+            }
+        },
+        "NetworkAclEntryEgress": {
+            "Type": "AWS::EC2::NetworkAclEntry",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "RuleNumber": "100",
+                "Protocol": "-1",
+                "RuleAction": "allow",
+                "Egress": "true",
+                "CidrBlock": "0.0.0.0/0"
+            }
+        },
+        "SubnetNetworkAclAssociation": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "Subnet"
+                },
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                }
+            }
+        },
+        "Subnet": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "CidrBlock": {
+                    "Ref": "SubnetCidr"
+                },
+                "AvailabilityZone": {
+                    "Ref": "AvailabilityZoneName"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "AlertLogic IDS Security Subnet ",
+                                    {
+                                        "Ref": "AccountId"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "DeploymentId"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "AvailabilityZoneName"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "VpcId"
+                                    }
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-AccountID",
+                        "Value": {
+                            "Ref": "AccountId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-EnvironmentID",
+                        "Value": {
+                            "Ref": "DeploymentId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Security"
+                    },
+                    {
+                        "Key": "AlertLogic IDS Manual Mode Template Version",
+                        "Value": {
+                            "Fn::FindInMap": [
+                                "Internal",
+                                "Tags",
+                                "Version"
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "RouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "AlertLogic IDS Security Route Table ",
+                                    {
+                                        "Ref": "AccountId"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "DeploymentId"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "AvailabilityZoneName"
+                                    },
+                                    "/",
+                                    {
+                                        "Ref": "VpcId"
+                                    }
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-AccountID",
+                        "Value": {
+                            "Ref": "AccountId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-EnvironmentID",
+                        "Value": {
+                            "Ref": "DeploymentId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Security"
+                    },
+                    {
+                        "Key": "AlertLogic IDS Manual Mode Template Version",
+                        "Value": {
+                            "Fn::FindInMap": [
+                                "Internal",
+                                "Tags",
+                                "Version"
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "Route": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGatewayId"
+                }
+            }
+        },
+        "SubnetRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "Subnet"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "AccountId": {
+            "Description": "AlertLogic account ID",
+            "Value": {
+                "Ref": "AccountId"
+            }
+        },
+        "DeploymentId": {
+            "Description": "AlertLogic deployment ID",
+            "Value": {
+                "Ref": "DeploymentId"
+            }
+        },
+        "VpcId": {
+            "Description": "ID of the protected VPC",
+            "Value": {
+                "Ref": "VpcId"
+            }
+        },
+        "NumAppliances": {
+            "Description": "The number of created IDS security appliances",
+            "Value": {
+                "Ref": "NumAppliances"
+            }
+        },
+        "SecurityGroupId": {
+            "Description": "ID of the security group assigned to the IDS security appliances",
+            "Value": {
+                "Fn::GetAtt": [
+                    "IdsReducedCfnStack",
+                    "Outputs.SecurityGroupId"
+                ]
+            }
+        }
+    }
+}
