@@ -11,6 +11,7 @@ Install the Alert Logic threat manager / log manager agent to your EC2 app nodes
 ## Role Variables
 
 - `alert_logic_agent_deb_source`: See defaults/main.yml
+- `alert_logic_agent_state`: Can be one of `present` (the default) or `absent`.
 
 ## Dependencies
 

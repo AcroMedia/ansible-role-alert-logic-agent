@@ -1,0 +1,17 @@
+---
+- name: Remove al-agent rsyslog config file
+  file:
+    path: /etc/rsyslog.d/alert-logic-agent.conf
+    state: absent
+  notify: alagent restart rsyslog
+
+- name: Ensure the Alert Logic agent service is stopped + disabled
+  service:
+    name: al-agent
+    state: stopped
+    enabled: false
+
+- name: Ensuree the Alert Logic Debian package is uninstalled
+  apt:
+    name: al-agent
+    state: absent
