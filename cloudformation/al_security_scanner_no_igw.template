@@ -1,0 +1,829 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "PROOF OF CONCEPT AWS CloudFormation Template (v1.1): Create AlertLogic security infrastructure inside a VPC. The artifacts created are: Route Table using the provided Internet Gateway as default route, Subnet inside the VPC using a user specified CIDR, a Network ACL attached to the Subnet giving it full access for all ingress traffic. Also a Security Group, a Launch Configuration for the security appliances that uses the Security Group and an Autoscaling Group that uses the Launch Configuration and the created Subnet.",
+    "Parameters": {
+        "AccountId": {
+            "Description": "AlertLogic Account ID",
+            "Type": "String",
+            "ConstraintDescription": "must be a valid AlertLogic Account ID"
+        },
+        "EnvironmentId": {
+            "Description": "AlertLogic Environment ID",
+            "Type": "String",
+            "ConstraintDescription": "must be a valid Environment ID created under the provided Account ID"
+        },
+        "Stack": {
+            "Description": "AlertLogic stack where the appliance will be deployed",
+            "Type": "String",
+            "Default": "US",
+            "AllowedValues": [
+                "US",
+                "UK"
+            ],
+            "ConstraintDescription": "must be a valid AlertLogic Stack"
+        },
+        "PublicIP": {
+            "Type": "String",
+            "Description": "For deployments into an existing subnet select if the subnet is a public or private subnet, for deployments that will create a new security subnet choose Public",
+            "Default": "Public",
+            "AllowedValues": [
+                "Public",
+                "Private"
+            ]
+        },
+        "ProtectedVPC": {
+            "Description": "VPC to protect",
+            "Type": "AWS::EC2::VPC::Id",
+            "ConstraintDescription": "must be an existing VPC"
+        },
+        "AttachedInternetGateway": {
+            "Description": "Optional parameter for the Internet Gateway ID attached to the protected VPC when creating a new subnet.",
+            "Type": "String"
+        },
+        "ExistingSubnetId": {
+            "Description": "Optional parameter to specify the subnet to be used. Leave empty to create new one.",
+            "Type": "String",
+            "Default": "",
+            "AllowedPattern": "(subnet-[a-f0-9]+){0,1}",
+            "ConstraintDescription": "must be a valid Subnet with available IPs if specified."
+        },
+        "SecuritySubnetCIDR": {
+            "Description": "CIDR range to be used by AlertLogic Security subnet. Only used if ExistingSubnetId is empty",
+            "Type": "String",
+            "AllowedPattern": "((\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})){0,1}",
+            "ConstraintDescription": "must be a free and valid CIDR range of the form x.x.x.x/28."
+        },
+        "ApplianceInstanceType": {
+            "Description": "AlertLogic Security Appliance EC2 instance type.",
+            "Type": "String",
+            "Default": "c5.large",
+            "AllowedValues": [
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m5.large",
+                "m5.xlarge",
+                "m5.2xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c5.large",
+                "c5.xlarge",
+                "c5.2xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type."
+        },
+        "ApplianceNumber": {
+            "Description": "Number of appliances to be created",
+            "Type": "Number",
+            "Default": "1",
+            "MaxValue": "10",
+            "ConstraintDescription": "must be an integer between 1 and 10"
+        },
+        "KeyName": {
+            "Description": "Name of an existing EC2 KeyPair required by cloudformation, appliance will not be accessible via SSH",
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Default": "route105-infra",
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+        }
+    },
+    "Conditions": {
+        "CreateSecuritySubnet": {
+            "Fn::Equals": [
+                "",
+                {
+                    "Ref": "ExistingSubnetId"
+                }
+            ]
+        },
+        "PublicIPAddreses": {
+            "Fn::Equals": [
+                "Public",
+                {
+                    "Ref": "PublicIP"
+                }
+            ]
+        }
+    },
+    "Mappings": {
+        "AWSRegionAMI": {
+            "us-east-1": {
+                "US": "ami-0cfe1e2d48132cb1f",
+                "UK": "ami-0cfe1e2d48132cb1f"
+            },
+            "us-east-2": {
+                "US": "ami-0a0bfd0683191baa7",
+                "UK": "ami-0a0bfd0683191baa7"
+            },
+            "us-west-2": {
+                "US": "ami-05b6c462cc60392b9",
+                "UK": "ami-05b6c462cc60392b9"
+            },
+            "us-west-1": {
+                "US": "ami-0182f258247fc032c",
+                "UK": "ami-0182f258247fc032c"
+            },
+            "eu-west-1": {
+                "US": "ami-06614b5b2bea68751",
+                "UK": "ami-06614b5b2bea68751"
+            },
+            "eu-west-2": {
+                "US": "ami-0f37f0a12298d59c6",
+                "UK": "ami-0f37f0a12298d59c6"
+            },
+            "eu-west-3": {
+                "US": "ami-073077d0478138645",
+                "UK": "ami-073077d0478138645"
+            },
+            "eu-central-1": {
+                "US": "ami-0075a34755064f92b",
+                "UK": "ami-0075a34755064f92b"
+            },
+            "ap-northeast-1": {
+                "US": "ami-0c51e0eeb89ea57cb",
+                "UK": "ami-0c51e0eeb89ea57cb"
+            },
+            "ap-northeast-2": {
+                "US": "ami-07185b9ff1dc384b8",
+                "UK": "ami-07185b9ff1dc384b8"
+            },
+            "ap-southeast-1": {
+                "US": "ami-076affc300b3f974f",
+                "UK": "ami-076affc300b3f974f"
+            },
+            "ap-southeast-2": {
+                "US": "ami-0892d934fbc643585",
+                "UK": "ami-0892d934fbc643585"
+            },
+            "ap-south-1": {
+                "US": "ami-07dde1f863928032c",
+                "UK": "ami-07dde1f863928032c"
+            },
+            "sa-east-1": {
+                "US": "ami-05099c9a953304422",
+                "UK": "ami-05099c9a953304422"
+            },
+            "ca-central-1": {
+                "US": "ami-088e7a0aa3de642de",
+                "UK": "ami-088e7a0aa3de642de"
+            }
+        },
+        "Vaporators": {
+            "US": {
+                "host": "agentapi.cloudinsight.alertlogic.com",
+                "port": "443"
+            },
+            "UK": {
+                "host": "agentapi.cloudinsight.alertlogic.co.uk",
+                "port": "443"
+            }
+        }
+    },
+    "Resources": {
+        "ApplianceASG": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AvailabilityZones": [],
+                "VPCZoneIdentifier": {
+                    "Fn::If": [
+                        "CreateSecuritySubnet",
+                        [
+                            {
+                                "Ref": "SecuritySubnet"
+                            }
+                        ],
+                        [
+                            {
+                                "Ref": "ExistingSubnetId"
+                            }
+                        ]
+                    ]
+                },
+                "LaunchConfigurationName": {
+                    "Ref": "ApplianceLaunchConfig"
+                },
+                "MinSize": {
+                    "Ref": "ApplianceNumber"
+                },
+                "MaxSize": {
+                    "Ref": "ApplianceNumber"
+                },
+                "DesiredCapacity": {
+                    "Ref": "ApplianceNumber"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "AlertLogic Security Appliance",
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "AlertLogic-AccountID",
+                        "Value": {
+                            "Ref": "AccountId"
+                        },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "AlertLogic-EnvironmentID",
+                        "Value": {
+                            "Ref": "EnvironmentId"
+                        },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Security",
+                        "PropagateAtLaunch": "true"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "12b8bd0d-c8fb-483a-815e-3f2fc9708781"
+                }
+            }
+        },
+        "ApplianceLaunchConfig": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "AWSRegionAMI",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        {
+                            "Ref": "Stack"
+                        }
+                    ]
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "ApplianceSecurityGroup"
+                    }
+                ],
+                "InstanceType": {
+                    "Ref": "ApplianceInstanceType"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "AssociatePublicIpAddress": {
+                    "Fn::If": [
+                        "PublicIPAddreses",
+                        "true",
+                        "false"
+                    ]
+                },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Sub": [
+                            "{\n    \"vaporator_host\": \"${VaporatorHost}\",\n    \"vaporator_port\": ${VaporatorPort},\n    \"account_id\": \"${AccountId}\",\n    \"environment_id\": \"${EnvironmentId}\"\n}",
+                            {
+                                "VaporatorHost": {
+                                    "Fn::FindInMap": [
+                                        "Vaporators",
+                                        {
+                                            "Ref": "Stack"
+                                        },
+                                        "host"
+                                    ]
+                                },
+                                "VaporatorPort": {
+                                    "Fn::FindInMap": [
+                                        "Vaporators",
+                                        {
+                                            "Ref": "Stack"
+                                        },
+                                        "port"
+                                    ]
+                                },
+                                "AccountId": {
+                                    "Ref": "AccountId"
+                                },
+                                "DeploymentId": {
+                                    "Ref": "EnvironmentId"
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "bc05710c-cffe-444d-aee0-eb8a9afd61b2"
+                }
+            }
+        },
+        "ApplianceSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "ProtectedVPC"
+                },
+                "GroupDescription": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "Alert Logic Security Group ",
+                            {
+                                "Ref": "AWS::StackId"
+                            },
+                            "_",
+                            {
+                                "Ref": "AccountId"
+                            },
+                            "_",
+                            {
+                                "Ref": "EnvironmentId"
+                            }
+                        ]
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "AlertLogic Security Group"
+                    },
+                    {
+                        "Key": "AlertLogic-AccountID",
+                        "Value": {
+                            "Ref": "AccountId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-EnvironmentID",
+                        "Value": {
+                            "Ref": "EnvironmentId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Security"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "17b8517c-d922-4bc7-9e02-1119ac37e60e"
+                }
+            }
+        },
+        "SecurityNACL": {
+            "Type": "AWS::EC2::NetworkAcl",
+            "Condition": "CreateSecuritySubnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "ProtectedVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "AlertLogic Network ACL"
+                    },
+                    {
+                        "Key": "AlertLogic-AccountID",
+                        "Value": {
+                            "Ref": "AccountId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-EnvironmentID",
+                        "Value": {
+                            "Ref": "EnvironmentId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Security"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "5f28c1eb-73c4-47b0-9461-9797def5f4cf"
+                }
+            }
+        },
+        "SecurityNetworkAclEntryIngress": {
+            "Type": "AWS::EC2::NetworkAclEntry",
+            "Condition": "CreateSecuritySubnet",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "SecurityNACL"
+                },
+                "RuleNumber": "100",
+                "Protocol": "-1",
+                "RuleAction": "allow",
+                "Egress": "false",
+                "CidrBlock": "0.0.0.0/0"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "dc37d025-329f-43d9-870d-05af490ea1b2"
+                }
+            }
+        },
+        "SecurityNetworkAclEntryEgress": {
+            "Type": "AWS::EC2::NetworkAclEntry",
+            "Condition": "CreateSecuritySubnet",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "SecurityNACL"
+                },
+                "RuleNumber": "100",
+                "Protocol": "-1",
+                "RuleAction": "allow",
+                "Egress": "true",
+                "CidrBlock": "0.0.0.0/0"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "3d0f4a0e-3a08-4ed5-b508-9c662ff68e8a"
+                }
+            }
+        },
+        "SecuritySubnetNetworkAclAssociation": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition": "CreateSecuritySubnet",
+            "Properties": {
+                "SubnetId": {
+                    "Fn::If": [
+                        "CreateSecuritySubnet",
+                        {
+                            "Ref": "SecuritySubnet"
+                        },
+                        {
+                            "Ref": "ExistingSubnetId"
+                        }
+                    ]
+                },
+                "NetworkAclId": {
+                    "Ref": "SecurityNACL"
+                }
+            }
+        },
+        "SecuritySubnet": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition": "CreateSecuritySubnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "ProtectedVPC"
+                },
+                "CidrBlock": {
+                    "Ref": "SecuritySubnetCIDR"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "AlertLogic Security Subnet"
+                    },
+                    {
+                        "Key": "AlertLogic-AccountID",
+                        "Value": {
+                            "Ref": "AccountId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-EnvironmentID",
+                        "Value": {
+                            "Ref": "EnvironmentId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Security"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "97a67835-02a5-4b9b-b406-e2dbe0bd4f6c"
+                }
+            }
+        },
+        "RouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Condition": "CreateSecuritySubnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "ProtectedVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "AlertLogic Security Route Table"
+                    },
+                    {
+                        "Key": "AlertLogic-AccountID",
+                        "Value": {
+                            "Ref": "AccountId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic-EnvironmentID",
+                        "Value": {
+                            "Ref": "EnvironmentId"
+                        }
+                    },
+                    {
+                        "Key": "AlertLogic",
+                        "Value": "Security"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "de53d9dd-06ae-4e6a-8aa0-ec8142ff39c6"
+                }
+            }
+        },
+        "Route": {
+            "Type": "AWS::EC2::Route",
+            "Condition": "CreateSecuritySubnet",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "AttachedInternetGateway"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "041a4980-bf78-443f-95fb-ee26e8dbbc60"
+                }
+            }
+        },
+        "SubnetRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition": "CreateSecuritySubnet",
+            "Properties": {
+                "SubnetId": {
+                    "Fn::If": [
+                        "CreateSecuritySubnet",
+                        {
+                            "Ref": "SecuritySubnet"
+                        },
+                        {
+                            "Ref": "ExistingSubnetId"
+                        }
+                    ]
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "ProtectedAccount": {
+            "Description": "Protected Account ID and Environment ID",
+            "Value": {
+                "Fn::Join": [
+                    "/",
+                    [
+                        {
+                            "Ref": "AccountId"
+                        },
+                        {
+                            "Ref": "EnvironmentId"
+                        }
+                    ]
+                ]
+            }
+        },
+        "ProtectedVPCId": {
+            "Description": "Protected VPC",
+            "Value": {
+                "Ref": "ProtectedVPC"
+            }
+        },
+        "InternetGatewayId": {
+            "Description": "Internet Gateway attached to VPC",
+            "Value": {
+                "Fn::If": [
+                    "CreateSecuritySubnet",
+                    {
+                        "Ref": "Route"
+                    },
+                    {
+                        "Ref": "AttachedInternetGateway"
+                    }
+                ]
+            }
+        },
+        "ApplianceNumber": {
+            "Description": "Number of created security appliances",
+            "Value": {
+                "Ref": "ApplianceNumber"
+            }
+        },
+        "RouteTableId": {
+            "Description": "Security Subnet newly created route table",
+            "Value": {
+                "Fn::If": [
+                    "CreateSecuritySubnet",
+                    {
+                        "Ref": "RouteTable"
+                    },
+                    ""
+                ]
+            }
+        },
+        "SecuritySubnetId": {
+            "Description": "Security Subnet",
+            "Value": {
+                "Fn::If": [
+                    "CreateSecuritySubnet",
+                    {
+                        "Ref": "SecuritySubnet"
+                    },
+                    {
+                        "Ref": "ExistingSubnetId"
+                    }
+                ]
+            }
+        },
+        "SecurityGroupId": {
+            "Description": "Newly created Security Subnet",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ApplianceSecurityGroup",
+                    "GroupId"
+                ]
+            }
+        },
+        "Vaporator": {
+            "Description": "Vaporator host and port for the stack",
+            "Value": {
+                "Fn::Join": [
+                    ":",
+                    [
+                        {
+                            "Fn::FindInMap": [
+                                "Vaporators",
+                                {
+                                    "Ref": "Stack"
+                                },
+                                "host"
+                            ]
+                        },
+                        {
+                            "Fn::FindInMap": [
+                                "Vaporators",
+                                {
+                                    "Ref": "Stack"
+                                },
+                                "port"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "de53d9dd-06ae-4e6a-8aa0-ec8142ff39c6": {
+                "size": {
+                    "width": 240,
+                    "height": 240
+                },
+                "position": {
+                    "x": 60,
+                    "y": 390
+                },
+                "z": 1,
+                "embeds": [
+                    "041a4980-bf78-443f-95fb-ee26e8dbbc60"
+                ]
+            },
+            "041a4980-bf78-443f-95fb-ee26e8dbbc60": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 90,
+                    "y": 450
+                },
+                "z": 2,
+                "parent": "de53d9dd-06ae-4e6a-8aa0-ec8142ff39c6",
+                "embeds": [],
+                "iscontainedinside": [
+                    "de53d9dd-06ae-4e6a-8aa0-ec8142ff39c6",
+                    "de53d9dd-06ae-4e6a-8aa0-ec8142ff39c6",
+                    "de53d9dd-06ae-4e6a-8aa0-ec8142ff39c6"
+                ]
+            },
+            "97a67835-02a5-4b9b-b406-e2dbe0bd4f6c": {
+                "size": {
+                    "width": 150,
+                    "height": 150
+                },
+                "position": {
+                    "x": 450,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "5f28c1eb-73c4-47b0-9461-9797def5f4cf": {
+                "size": {
+                    "width": 330,
+                    "height": 240
+                },
+                "position": {
+                    "x": 60,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": [
+                    "3d0f4a0e-3a08-4ed5-b508-9c662ff68e8a",
+                    "dc37d025-329f-43d9-870d-05af490ea1b2"
+                ]
+            },
+            "3d0f4a0e-3a08-4ed5-b508-9c662ff68e8a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 90,
+                    "y": 150
+                },
+                "z": 2,
+                "parent": "5f28c1eb-73c4-47b0-9461-9797def5f4cf",
+                "embeds": [],
+                "iscontainedinside": [
+                    "5f28c1eb-73c4-47b0-9461-9797def5f4cf",
+                    "5f28c1eb-73c4-47b0-9461-9797def5f4cf",
+                    "5f28c1eb-73c4-47b0-9461-9797def5f4cf"
+                ]
+            },
+            "dc37d025-329f-43d9-870d-05af490ea1b2": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 210,
+                    "y": 150
+                },
+                "z": 2,
+                "parent": "5f28c1eb-73c4-47b0-9461-9797def5f4cf",
+                "embeds": [],
+                "iscontainedinside": [
+                    "5f28c1eb-73c4-47b0-9461-9797def5f4cf",
+                    "5f28c1eb-73c4-47b0-9461-9797def5f4cf",
+                    "5f28c1eb-73c4-47b0-9461-9797def5f4cf"
+                ]
+            },
+            "17b8517c-d922-4bc7-9e02-1119ac37e60e": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 450,
+                    "y": 300
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "bc05710c-cffe-444d-aee0-eb8a9afd61b2": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 570,
+                    "y": 300
+                },
+                "z": 1,
+                "embeds": [],
+                "isassociatedwith": [
+                    "17b8517c-d922-4bc7-9e02-1119ac37e60e"
+                ]
+            },
+            "12b8bd0d-c8fb-483a-815e-3f2fc9708781": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 360,
+                    "y": 420
+                },
+                "z": 1,
+                "embeds": [],
+                "isassociatedwith": [
+                    "bc05710c-cffe-444d-aee0-eb8a9afd61b2"
+                ]
+            }
+        }
+    }
+}
