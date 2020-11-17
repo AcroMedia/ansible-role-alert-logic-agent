@@ -2,6 +2,9 @@
 - name: Converge
   hosts: all
   become: true
+  vars:
+    - alert_logic_agent_deb_source: https://scc.alertlogic.net/software/al-agent_LATEST_amd64.deb
+    - alert_logic_agent_state: present
 
   roles:
     - role: ansible-role-alert-logic-agent
