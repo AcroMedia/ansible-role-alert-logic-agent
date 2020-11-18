@@ -1,3 +1,11 @@
 ---
-- name: Check whether /tmp/my.conf contains "127.0.0.1"
-  shell: grep -Fxq "*.* @@127.0.0.1:1514;RSYSLOG_FileFormat" /etc/rsyslog.d/alert-logic-agent.conf
+- name: Check whether rsyslog is configured to send data to the Alert Logic agent
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Check whether /tmp/my.conf contains "127.0.0.1"
+      shell: grep -Fxq "*.* @@127.0.0.1:1514;RSYSLOG_FileFormat" /etc/rsyslog.d/alert-logic-agent.conf
+      changed_when: false
+
+
