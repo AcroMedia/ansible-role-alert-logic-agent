@@ -6,6 +6,8 @@
   tasks:
     - name: Check whether rsyslog is configured to send data to the Alert Logic agent
       shell: grep -Fxq "*.* @@127.0.0.1:1514;RSYSLOG_FileFormat" /etc/rsyslog.d/alert-logic-agent.conf
-      changed_when: false
+
+    - name: Check whether Alert Logic agent is running
+      shell: pgrep -f /var/alertlogic/lib/agent/bin/al-agent
 
 
