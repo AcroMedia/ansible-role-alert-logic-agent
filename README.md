@@ -1,5 +1,7 @@
 # ansible-role-alert-logic-agent
 
+![.github/workflows/molecule.yml](https://github.com/AcroMedia/ansible-role-alert-logic-agent/workflows/.github/workflows/molecule.yml/badge.svg)
+
 Install the Alert Logic threat manager / log manager agent to your EC2 app nodes running in an Amazon VPC.
 
 ## Requirements
