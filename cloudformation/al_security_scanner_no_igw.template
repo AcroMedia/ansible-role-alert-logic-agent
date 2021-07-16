@@ -164,8 +164,8 @@
                 "UK": "ami-05099c9a953304422"
             },
             "ca-central-1": {
-                "US": "ami-088e7a0aa3de642de",
-                "UK": "ami-088e7a0aa3de642de"
+                "US": "ami-06ff0915aea36b0c5",
+                "UK": "ami-06ff0915aea36b0c5"
             }
         },
         "Vaporators": {

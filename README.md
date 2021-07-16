@@ -15,6 +15,10 @@ Install the Alert Logic threat manager / log manager agent to your EC2 app nodes
 - `alert_logic_agent_deb_source`: See defaults/main.yml
 - `alert_logic_agent_state`: Can be one of `present` (the default) or `absent`.
 
+## AMIs
+
+AMI ids will probably get out dated time to time. Will have to add new one once it does.
+
 ## Dependencies
 
 None.
