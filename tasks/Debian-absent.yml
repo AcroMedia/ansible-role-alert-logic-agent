@@ -10,6 +10,7 @@
     name: al-agent
     state: stopped
     enabled: false
+  ignore_errors: "{{ alert_logic_agent_state != 'present' }}"   # This task can generate an error if the package was never installed.
 
 - name: Ensuree the Alert Logic Debian package is uninstalled
   apt:

@@ -9,6 +9,7 @@
     name: al-agent
     state: started
     enabled: true
+  ignore_errors: "{{ alert_logic_agent_state != 'present' }}"   # This task can generate an error if the package was never installed.
 
 - name: Configure rsyslog to send data to the Alert Logic agent (auto-claim style)
   copy:
