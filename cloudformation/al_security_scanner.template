@@ -184,63 +184,72 @@
     "Mappings": {
         "Internal": {
             "Tags": {
-                "Version": "v1.0.11"
+                "Version": "v1.0.18"
             }
         },
         "RegionSettings": {
+            "af-south-1": {
+                "ImageId": "ami-0159f0cdf073852b7"
+            },
             "ap-east-1": {
-                "ImageId": "ami-00b1e2df7e6f55bdc"
+                "ImageId": "ami-00491099c15632859"
             },
             "ap-northeast-1": {
-                "ImageId": "ami-0c51e0eeb89ea57cb"
+                "ImageId": "ami-00e5e1236a0190e66"
             },
             "ap-northeast-2": {
-                "ImageId": "ami-07185b9ff1dc384b8"
+                "ImageId": "ami-03fc3c943a0fcf4eb"
+            },
+            "ap-northeast-3": {
+                "ImageId": "ami-06ca9da8de3492fb6"
             },
             "ap-south-1": {
-                "ImageId": "ami-07dde1f863928032c"
+                "ImageId": "ami-02bd0ec08a2c29899"
             },
             "ap-southeast-1": {
-                "ImageId": "ami-076affc300b3f974f"
+                "ImageId": "ami-0e8e751b535af705a"
             },
             "ap-southeast-2": {
-                "ImageId": "ami-0892d934fbc643585"
+                "ImageId": "ami-01177067d2dd75c05"
             },
             "ca-central-1": {
-                "ImageId": "ami-088e7a0aa3de642de"
+                "ImageId": "ami-0a26524cdfecbd852"
             },
             "eu-central-1": {
-                "ImageId": "ami-0075a34755064f92b"
+                "ImageId": "ami-0e1825c8e35ce6d81"
             },
             "eu-north-1": {
-                "ImageId": "ami-0d065c2312363c2e4"
+                "ImageId": "ami-0d6a305ce9082582c"
+            },
+            "eu-south-1": {
+                "ImageId": "ami-0701940c7f77f67e9"
             },
             "eu-west-1": {
-                "ImageId": "ami-06614b5b2bea68751"
+                "ImageId": "ami-0574ab19b7a2ba70a"
             },
             "eu-west-2": {
-                "ImageId": "ami-0f37f0a12298d59c6"
+                "ImageId": "ami-0279cfea84cb2b524"
             },
             "eu-west-3": {
-                "ImageId": "ami-073077d0478138645"
+                "ImageId": "ami-0cdb23dcb2e6ed9c6"
             },
             "me-south-1": {
-                "ImageId": "ami-0a12b886c69fbf4ca"
+                "ImageId": "ami-00b5e759c3493e271"
             },
             "sa-east-1": {
-                "ImageId": "ami-05099c9a953304422"
+                "ImageId": "ami-0934de1d8021e00c3"
             },
             "us-east-1": {
-                "ImageId": "ami-0cfe1e2d48132cb1f"
+                "ImageId": "ami-063fb3ea2393804df"
             },
             "us-east-2": {
-                "ImageId": "ami-0a0bfd0683191baa7"
+                "ImageId": "ami-04ddd5c786bd4376e"
             },
             "us-west-1": {
-                "ImageId": "ami-0182f258247fc032c"
+                "ImageId": "ami-09526826ceeda44ef"
             },
             "us-west-2": {
-                "ImageId": "ami-05b6c462cc60392b9"
+                "ImageId": "ami-0c11c7c5f75a8d724"
             }
         },
         "Vaporators": {
