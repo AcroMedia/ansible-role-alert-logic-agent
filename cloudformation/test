@@ -12,7 +12,6 @@
             "Type": "String",
             "ConstraintDescription": "must be a valid Environment ID created under the provided Account ID"
         },
-
         "Stack": {
             "Description": "AlertLogic stack where the appliance will be deployed",
             "Type": "String",
@@ -59,13 +58,12 @@
             "Type": "String",
             "Default": "c5.large",
             "AllowedValues": [
-                "t3.medium",
-                "t3.large",
-                "m4.2xlarge",
                 "m4.large",
                 "m4.xlarge",
+                "m4.2xlarge",
                 "m5.large",
                 "m5.xlarge",
+                "m5.2xlarge",
                 "c4.large",
                 "c4.xlarge",
                 "c4.2xlarge",
@@ -362,18 +360,7 @@
                     },
                     {
                         "Key": "AlertLogic",
-                        "Value": "Security",
-                        "PropagateAtLaunch": "true"
-                    }
-                    {
-                        "Key": "AlertLogic Scan Manual Mode Template Version",
-                        "Value": {
-                            "Fn::FindInMap": [
-                                "Internal",
-                                "Tags",
-                                "Version"
-                            ]
-                        }
+                        "Value": "Security"
                     }
                 ]
             },
@@ -669,27 +656,31 @@
                 ]
             }
         },
-        "VaporatorHost": {
-            "Description": "A vaporator host name for the selected AlertLogic data center",
+        "Vaporator": {
+            "Description": "Vaporator host and port for the stack",
             "Value": {
-                "Fn::FindInMap": [
-                    "Vaporators",
-                    {
-                        "Ref": "DatacenterLocation"
-                    },
-                    "host"
-                ]
-            }
-        },
-        "VaporatorPort": {
-            "Description": "A vaporator port for the selected AlertLogic data center",
-            "Value": {
-                "Fn::FindInMap": [
-                    "Vaporators",
-                    {
-                        "Ref": "DatacenterLocation"
-                    },
-                    "port"
+                "Fn::Join": [
+                    ":",
+                    [
+                        {
+                            "Fn::FindInMap": [
+                                "Vaporators",
+                                {
+                                    "Ref": "Stack"
+                                },
+                                "host"
+                            ]
+                        },
+                        {
+                            "Fn::FindInMap": [
+                                "Vaporators",
+                                {
+                                    "Ref": "Stack"
+                                },
+                                "port"
+                            ]
+                        }
+                    ]
                 ]
             }
         }
