@@ -12,7 +12,6 @@
             "Type": "String",
             "ConstraintDescription": "must be a valid Environment ID created under the provided Account ID"
         },
-
         "Stack": {
             "Description": "AlertLogic stack where the appliance will be deployed",
             "Type": "String",
@@ -59,13 +58,12 @@
             "Type": "String",
             "Default": "c5.large",
             "AllowedValues": [
-                "t3.medium",
-                "t3.large",
-                "m4.2xlarge",
                 "m4.large",
                 "m4.xlarge",
+                "m4.2xlarge",
                 "m5.large",
                 "m5.xlarge",
+                "m5.2xlarge",
                 "c4.large",
                 "c4.xlarge",
                 "c4.2xlarge",
@@ -110,64 +108,64 @@
     "Mappings": {
         "AWSRegionAMI": {
             "us-east-1": {
-                "US": "ami-0cfe1e2d48132cb1f",
-                "UK": "ami-0cfe1e2d48132cb1f"
+                "US": "ami-063fb3ea2393804df",
+                "UK": "ami-063fb3ea2393804df"
             },
             "us-east-2": {
-                "US": "ami-0a0bfd0683191baa7",
-                "UK": "ami-0a0bfd0683191baa7"
+                "US": "ami-04ddd5c786bd4376e",
+                "UK": "ami-04ddd5c786bd4376e"
             },
             "us-west-2": {
-                "US": "ami-05b6c462cc60392b9",
-                "UK": "ami-05b6c462cc60392b9"
+                "US": "ami-0c11c7c5f75a8d724",
+                "UK": "ami-0c11c7c5f75a8d724"
             },
             "us-west-1": {
-                "US": "ami-0182f258247fc032c",
-                "UK": "ami-0182f258247fc032c"
+                "US": "ami-09526826ceeda44ef",
+                "UK": "ami-09526826ceeda44ef"
             },
             "eu-west-1": {
-                "US": "ami-06614b5b2bea68751",
-                "UK": "ami-06614b5b2bea68751"
+                "US": "ami-0574ab19b7a2ba70a",
+                "UK": "ami-0574ab19b7a2ba70a"
             },
             "eu-west-2": {
-                "US": "ami-0f37f0a12298d59c6",
-                "UK": "ami-0f37f0a12298d59c6"
+                "US": "ami-0279cfea84cb2b524",
+                "UK": "ami-0279cfea84cb2b524"
             },
             "eu-west-3": {
-                "US": "ami-073077d0478138645",
-                "UK": "ami-073077d0478138645"
+                "US": "ami-0cdb23dcb2e6ed9c6",
+                "UK": "ami-0cdb23dcb2e6ed9c6"
             },
             "eu-central-1": {
-                "US": "ami-0075a34755064f92b",
-                "UK": "ami-0075a34755064f92b"
+                "US": "ami-0e1825c8e35ce6d81",
+                "UK": "ami-0e1825c8e35ce6d81"
             },
             "ap-northeast-1": {
-                "US": "ami-0c51e0eeb89ea57cb",
-                "UK": "ami-0c51e0eeb89ea57cb"
+                "US": "ami-00e5e1236a0190e66",
+                "UK": "ami-00e5e1236a0190e66"
             },
             "ap-northeast-2": {
-                "US": "ami-07185b9ff1dc384b8",
-                "UK": "ami-07185b9ff1dc384b8"
+                "US": "ami-03fc3c943a0fcf4eb",
+                "UK": "ami-03fc3c943a0fcf4eb"
             },
             "ap-southeast-1": {
-                "US": "ami-076affc300b3f974f",
-                "UK": "ami-076affc300b3f974f"
+                "US": "ami-0e8e751b535af705a",
+                "UK": "ami-0e8e751b535af705a"
             },
             "ap-southeast-2": {
-                "US": "ami-0892d934fbc643585",
-                "UK": "ami-0892d934fbc643585"
+                "US": "ami-01177067d2dd75c05",
+                "UK": "ami-01177067d2dd75c05"
             },
             "ap-south-1": {
-                "US": "ami-07dde1f863928032c",
-                "UK": "ami-07dde1f863928032c"
+                "US": "ami-02bd0ec08a2c29899",
+                "UK": "ami-02bd0ec08a2c29899"
             },
             "sa-east-1": {
-                "US": "ami-05099c9a953304422",
-                "UK": "ami-05099c9a953304422"
+                "US": "ami-0934de1d8021e00c3",
+                "UK": "ami-0934de1d8021e00c3"
             },
             "ca-central-1": {
-                "US": "ami-06ff0915aea36b0c5",
-                "UK": "ami-06ff0915aea36b0c5"
+                "US": "ami-0a26524cdfecbd852",
+                "UK": "ami-0a26524cdfecbd852"
             }
         },
         "Vaporators": {
@@ -362,18 +360,7 @@
                     },
                     {
                         "Key": "AlertLogic",
-                        "Value": "Security",
-                        "PropagateAtLaunch": "true"
-                    }
-                    {
-                        "Key": "AlertLogic Scan Manual Mode Template Version",
-                        "Value": {
-                            "Fn::FindInMap": [
-                                "Internal",
-                                "Tags",
-                                "Version"
-                            ]
-                        }
+                        "Value": "Security"
                     }
                 ]
             },
@@ -669,27 +656,31 @@
                 ]
             }
         },
-        "VaporatorHost": {
-            "Description": "A vaporator host name for the selected AlertLogic data center",
+        "Vaporator": {
+            "Description": "Vaporator host and port for the stack",
             "Value": {
-                "Fn::FindInMap": [
-                    "Vaporators",
-                    {
-                        "Ref": "DatacenterLocation"
-                    },
-                    "host"
-                ]
-            }
-        },
-        "VaporatorPort": {
-            "Description": "A vaporator port for the selected AlertLogic data center",
-            "Value": {
-                "Fn::FindInMap": [
-                    "Vaporators",
-                    {
-                        "Ref": "DatacenterLocation"
-                    },
-                    "port"
+                "Fn::Join": [
+                    ":",
+                    [
+                        {
+                            "Fn::FindInMap": [
+                                "Vaporators",
+                                {
+                                    "Ref": "Stack"
+                                },
+                                "host"
+                            ]
+                        },
+                        {
+                            "Fn::FindInMap": [
+                                "Vaporators",
+                                {
+                                    "Ref": "Stack"
+                                },
+                                "port"
+                            ]
+                        }
+                    ]
                 ]
             }
         }
