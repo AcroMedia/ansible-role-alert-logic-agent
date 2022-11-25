@@ -45,7 +45,7 @@
         "InstanceType": {
             "Description": "Select the instance type to launch IDS security appliances",
             "Type": "String",
-            "Default": "c5.xlarge",
+            "Default": "c5.large",
             "AllowedValues": [
                 "m4.large",
                 "m4.xlarge",
